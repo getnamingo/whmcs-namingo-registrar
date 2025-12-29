@@ -10,7 +10,21 @@ chown -R www-data:www-data /var/www/html/whmcs/modules/addons/namingo_registrar
 chmod -R 755 /var/www/html/whmcs/modules/addons/namingo_registrar
 ```
 
-- Go to Settings > Apps & Integrations in the admin panel, search for "Namingo Registrar" and then activate it.
+- Go to **Settings → Apps & Integrations** in the WHMCS admin area, search for **“Namingo Registrar”**, activate the module, and then configure it from its respective configuration menu.
+
+- Add the following rules to the **very top** of your WHMCS `.htaccess` file (before the WHMCS-managed section):  
+
+```bash
+<IfModule mod_rewrite.c>
+RewriteCond %{REQUEST_URI} ^/lookup [NC]
+RewriteRule ^lookup$ ./index.php?m=namingo_registrar&page=whois [L,QSA]
+
+RewriteCond %{REQUEST_URI} ^/claims [NC]
+RewriteRule ^claims$ ./index.php?m=namingo_registrar&page=tmch [L,QSA]
+</IfModule>
+```
+
+- After each WHMCS update, **verify that these rules are still present**, as WHMCS updates may overwrite or regenerate the `.htaccess` file.
 
 ## Upgrading from `whmcs_registrar` module (v1.0 or earlier)
 
@@ -40,6 +54,18 @@ chmod -R 755 /var/www/html/whmcs/modules/addons/namingo_registrar
   In the `_activate()` function, **comment out** the line `Capsule::unprepared($sql);`.
   
 - Now **activate the new module** and **reconfigure it** using the settings you saved from the old modules.
+
+- Add the following rules to the **very top** of your WHMCS `.htaccess` file (before the WHMCS-managed section):  
+
+```bash
+<IfModule mod_rewrite.c>
+RewriteCond %{REQUEST_URI} ^/lookup [NC]
+RewriteRule ^lookup$ ./index.php?m=namingo_registrar&page=whois [L,QSA]
+
+RewriteCond %{REQUEST_URI} ^/claims [NC]
+RewriteRule ^claims$ ./index.php?m=namingo_registrar&page=tmch [L,QSA]
+</IfModule>
+```
 
 ## Usage Instructions
 
