@@ -1,6 +1,6 @@
 <?php
 /**
- * Namingo Registrar for WHMCS  (https://www.whmcs.com/)
+ * Namingo Registrar for WHMCS (https://www.whmcs.com/)
  *
  * WHMCS module for Namingo Registrar implementing ICANN registrar technical requirements
  * Written in 2025 by Taras Kondratyuk (https://namingo.org)
@@ -48,6 +48,26 @@ function namingo_registrar_config(): array
                 'Type' => 'text',
                 'Size' => '50',
                 'Description' => 'Enter the WHMCS API key for sending emails.',
+            ],
+            'tmch_username' => [
+                'FriendlyName' => 'TMCH Username',
+                'Type'         => 'text',
+                'Size'         => '30',
+                'Default'      => '',
+                'Description'  => 'Username for TMCH authentication.',
+            ],
+            'tmch_password' => [
+                'FriendlyName' => 'TMCH Password',
+                'Type'         => 'password',
+                'Size'         => '30',
+                'Default'      => '',
+                'Description'  => 'Password for TMCH authentication.',
+            ],
+            'tmch_test_server' => [
+                'FriendlyName' => 'Use TMCH Test Server',
+                'Type'         => 'yesno',
+                'Default'      => '',
+                'Description'  => 'Enable to use the TMCH test (OT&E) server instead of production.',
             ],
         ],
     ];
@@ -313,99 +333,105 @@ function namingo_registrar_clientarea(array $vars): array
     }
 
     if ($page === 'tmch') {
-        $username = $vars['username'];
-        $password = $vars['password'];
+        $modulelink = $vars['modulelink'];
+        $systemUrl = $vars['systemurl'];
+        $tmchUser = $vars['tmch_username'] ?? '';
+        $tmchPass = $vars['tmch_password'] ?? '';
+        $useTest  = !empty($vars['tmch_test_server']);
 
-        // Access GET parameters and sanitize the lookupKey
-        $lookupKey = filter_input(INPUT_GET, 'lookupKey', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $lookupKey = isset($_GET['lookupKey']) ? trim((string)$_GET['lookupKey']) : '';
+        $lookupKey = preg_replace('/[^A-Za-z0-9_\-]/', '', $lookupKey);
 
-        if (!$lookupKey) {
-            // Display the form to input 'lookupKey'
-            return [
-                'pagetitle' => 'TMCH Claims Notice',
-                'breadcrumb' => ['index.php?m=tmch' => 'TMCH Claims Notice'],
-                'templatefile' => 'tmch',
-                'requirelogin' => false,
-                'vars' => [
-                    'error' => 'Please provide a lookupKey.',
-                ],
-            ];
-        }
+        if ($lookupKey) {
+            $baseUrl = $useTest
+                ? 'https://test.tmcnis.org/cnis/'
+                : 'https://tmcnis.org/cnis/';
 
-        $url = "https://test.tmcnis.org/cnis/" . $lookupKey . ".xml";
+            $url = $baseUrl . $lookupKey . '.xml';
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-        curl_setopt($ch, CURLOPT_USERPWD, $username . ":" . $password);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        $xml = curl_exec($ch);
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+            curl_setopt($ch, CURLOPT_USERPWD, $username . ":" . $password);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            $xml = curl_exec($ch);
 
-        if (curl_errno($ch)) {
-            $error = curl_error($ch);
-        }
-        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($xml) {
-            $xml_object = simplexml_load_string($xml);
-            $xml_object->registerXPathNamespace("tmNotice", "urn:ietf:params:xml:ns:tmNotice-1.0");
-            $claims = $xml_object->xpath('//tmNotice:claim');
-
-            $note = "This message is a notification that you have applied for a domain name that matches a trademark record submitted to the Trademark Clearinghouse. Your eligibility to register this domain name will depend on your intended use and if it is similar or relates to the trademarks listed below." . PHP_EOL;
-
-            $note .= "Please be aware that your rights to register this domain name may not be protected as a noncommercial use or 'fair use' in accordance with the laws of your country. It is crucial that you read and understand the trademark information provided, including the trademarks, jurisdictions, and goods and services for which the trademarks are registered." . PHP_EOL;
-
-            $note .= "It's also important to note that not all jurisdictions review trademark applications closely, so some of the trademark information may exist in a national or regional registry that does not conduct a thorough review of trademark rights prior to registration. If you have any questions, it's recommended that you consult with a legal expert or attorney on trademarks and intellectual property for guidance." . PHP_EOL;
-
-            $note .= "By continuing with this registration, you're representing that you have received this notice and understand it and, to the best of your knowledge, your registration and use of the requested domain name will not infringe on the trademark rights listed below." . PHP_EOL;
-
-            $note .= "The following " . count($claims) . " marks are listed in the Trademark Clearinghouse:" . PHP_EOL;
-
-            $note .= PHP_EOL;
-
-            foreach ($claims as $claim) {
-                $elements = $claim->xpath('.//*');
-                $firstHolder = true;
-                $firstContact = true;
-                foreach ($elements as $element) {
-                    $elementName = trim($element->getName());
-                    $elementText = trim((string) $element);
-                    if (!empty($elementName) && !empty($elementText)) {
-                        if ($element->xpath('..')[0]->getName() == "holder" && $firstHolder) {
-                            $note .= "Trademark Registrant: " . PHP_EOL;
-                            $firstHolder = false;
-                        }
-                        if ($element->xpath('..')[0]->getName() == "contact" && $firstContact) {
-                            $note .= "Trademark Contact: " . PHP_EOL;
-                            $firstContact = false;
-                        }
-                        $note .= $elementName . ": " . $elementText . PHP_EOL;
-                    }
-                }
-                $note .= PHP_EOL;
+            if (curl_errno($ch)) {
+                $error = curl_error($ch);
             }
+            $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-            // Return data to the template
-            return [
-                'pagetitle' => 'TMCH Claims Notice',
-                'breadcrumb' => ['index.php?m=tmch' => 'TMCH Claims Notice'],
-                'templatefile' => 'tmch',
-                'requirelogin' => false,
-                'vars' => [
-                    'note' => nl2br(htmlspecialchars($note)),
-                ],
-            ];
+            if ($xml) {
+                $xml_object = simplexml_load_string($xml);
+                $xml_object->registerXPathNamespace("tmNotice", "urn:ietf:params:xml:ns:tmNotice-1.0");
+                $claims = $xml_object->xpath('//tmNotice:claim');
+
+                $note = "This message is a notification that you have applied for a domain name that matches a trademark record submitted to the Trademark Clearinghouse. Your eligibility to register this domain name will depend on your intended use and if it is similar or relates to the trademarks listed below." . PHP_EOL;
+
+                $note .= "Please be aware that your rights to register this domain name may not be protected as a noncommercial use or 'fair use' in accordance with the laws of your country. It is crucial that you read and understand the trademark information provided, including the trademarks, jurisdictions, and goods and services for which the trademarks are registered." . PHP_EOL;
+
+                $note .= "It's also important to note that not all jurisdictions review trademark applications closely, so some of the trademark information may exist in a national or regional registry that does not conduct a thorough review of trademark rights prior to registration. If you have any questions, it's recommended that you consult with a legal expert or attorney on trademarks and intellectual property for guidance." . PHP_EOL;
+
+                $note .= "By continuing with this registration, you're representing that you have received this notice and understand it and, to the best of your knowledge, your registration and use of the requested domain name will not infringe on the trademark rights listed below." . PHP_EOL;
+
+                $note .= "The following " . count($claims) . " marks are listed in the Trademark Clearinghouse:" . PHP_EOL;
+
+                $note .= PHP_EOL;
+
+                foreach ($claims as $claim) {
+                    $elements = $claim->xpath('.//*');
+                    $firstHolder = true;
+                    $firstContact = true;
+                    foreach ($elements as $element) {
+                        $elementName = trim($element->getName());
+                        $elementText = trim((string) $element);
+                        if (!empty($elementName) && !empty($elementText)) {
+                            if ($element->xpath('..')[0]->getName() == "holder" && $firstHolder) {
+                                $note .= "Trademark Registrant: " . PHP_EOL;
+                                $firstHolder = false;
+                            }
+                            if ($element->xpath('..')[0]->getName() == "contact" && $firstContact) {
+                                $note .= "Trademark Contact: " . PHP_EOL;
+                                $firstContact = false;
+                            }
+                            $note .= $elementName . ": " . $elementText . PHP_EOL;
+                        }
+                    }
+                    $note .= PHP_EOL;
+                }
+
+                return [
+                    'pagetitle' => 'TMCH Claims Notice',
+                    'breadcrumb' => ['index.php?m=namingo_registrar&page=tmch' => 'TMCH Claims Notice'],
+                    'templatefile' => 'tmch',
+                    'modulelink' => $modulelink,
+                    'systemurl' => $systemUrl,
+                    'requirelogin' => false,
+                    'vars' => [
+                        'note' => nl2br(htmlspecialchars($note)),
+                    ],
+                ];
+            } else {
+                $error = 'No claims notice loaded';
+                return [
+                    'pagetitle' => 'TMCH Claims Notice',
+                    'breadcrumb' => ['index.php?m=namingo_registrar&page=tmch' => 'TMCH Claims Notice'],
+                    'templatefile' => 'tmch',
+                    'modulelink' => $modulelink,
+                    'systemurl' => $systemUrl,
+                    'requirelogin' => false,
+                    'vars' => [
+                        'error' => htmlspecialchars($error),
+                    ],
+                ];
+            }
         } else {
-            $error = 'No claims notice loaded';
             return [
                 'pagetitle' => 'TMCH Claims Notice',
-                'breadcrumb' => ['index.php?m=tmch' => 'TMCH Claims Notice'],
+                'breadcrumb' => ['index.php?m=namingo_registrar&page=tmch' => 'TMCH Claims Notice'],
                 'templatefile' => 'tmch',
                 'requirelogin' => false,
-                'vars' => [
-                    'error' => htmlspecialchars($error),
-                ],
             ];
         }
     }
@@ -441,7 +467,6 @@ function namingo_registrar_clientarea(array $vars): array
         $success = null;
         $error = null;
 
-        // Check if the domain is provided and exists in WHMCS
         if ($domain) {
             $domainExists = Capsule::table('tbldomains')->where('domain', $domain)->first();
             
@@ -452,7 +477,6 @@ function namingo_registrar_clientarea(array $vars): array
             $error = "Error: You must specify a domain.";
         }
 
-        // Handle form submission if no error, and method is POST
         if (!$error && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $submissionResult = contact_handleSubmission($domain, $apiKey);
             if ($submissionResult === true) {
@@ -477,7 +501,7 @@ function namingo_registrar_clientarea(array $vars): array
         ];
     }
 
-    // fallback (should never hit)
+    // fallback
     return [
         'pagetitle'    => 'Error',
         'templatefile' => 'error',
@@ -574,7 +598,6 @@ function contact_handleSubmission($domain, $apiKey)
     $response = curl_exec($ch);
     curl_close($ch);
 
-    // Check the response from WHMCS API and return a success or error message
     if ($response) {
         $decodedResponse = json_decode($response, true);
         if (isset($decodedResponse['result']) && $decodedResponse['result'] === 'success') {

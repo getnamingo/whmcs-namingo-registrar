@@ -16,7 +16,7 @@
             {/if}
 
             {if $domain && !$success}
-            <form method="POST" action="{$modulelink}&domain={$domain|escape}">
+            <form method="POST" action="{$modulelink}&page=contact&domain={$domain|escape}">
 
                 <h3 class="card-title">Domain: {$domain|escape}</h3>
 

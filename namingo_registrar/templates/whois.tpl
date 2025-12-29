@@ -24,7 +24,7 @@
                     <form id="lookupForm">
                         <div class="row mb-3">
                             <div class="col-12 col-md-8">
-                                <input type="text" class="form-control form-control-lg" id="domainInput" placeholder="Enter Domain Name" autocapitalize="none">
+                                <input type="text" class="form-control form-control-lg" id="domainInput" placeholder="Enter Domain Name" autocapitalize="none" required>
                             </div>
                             <div class="col-12 col-md-4 mt-3 mt-md-0 d-flex flex-column flex-md-row justify-content-center justify-content-md-end text-center">
                                 <button type="button" class="btn btn-info btn-lg mb-2 mb-md-0 w-100 w-md-auto me-md-2" id="whoisButton">WHOIS</button>
