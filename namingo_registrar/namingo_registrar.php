@@ -341,6 +341,13 @@ function namingo_registrar_clientarea(array $vars): array
 
         $lookupKey = isset($_GET['lookupKey']) ? trim((string)$_GET['lookupKey']) : '';
 
+        if ($lookupKey === '' || strpos($lookupKey, '..') !== false || strpos($lookupKey, '\\') !== false
+            || preg_match("/[\r\n]/", $lookupKey)) {
+            throw new Exception('Invalid lookupKey');
+        }
+
+        $lookupKey = implode('/', array_map('rawurlencode', explode('/', $lookupKey)));
+
         if ($lookupKey) {
             $baseUrl = $useTest
                 ? 'https://test.tmcnis.org/cnis/'
