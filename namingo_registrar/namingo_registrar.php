@@ -340,7 +340,6 @@ function namingo_registrar_clientarea(array $vars): array
         $useTest  = !empty($vars['tmch_test_server']);
 
         $lookupKey = isset($_GET['lookupKey']) ? trim((string)$_GET['lookupKey']) : '';
-        $lookupKey = preg_replace('/[^A-Za-z0-9_\-]/', '', $lookupKey);
 
         if ($lookupKey) {
             $baseUrl = $useTest
@@ -352,8 +351,11 @@ function namingo_registrar_clientarea(array $vars): array
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-            curl_setopt($ch, CURLOPT_USERPWD, $username . ":" . $password);
+            curl_setopt($ch, CURLOPT_USERPWD, $tmchUser . ":" . $tmchPass);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+            curl_setopt($ch, CURLOPT_HEADER, 0);
             $xml = curl_exec($ch);
 
             if (curl_errno($ch)) {
@@ -362,8 +364,28 @@ function namingo_registrar_clientarea(array $vars): array
             $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if ($xml) {
+            if ($xml && str_starts_with(ltrim($xml), '<')) {
+                libxml_use_internal_errors(true);
+
                 $xml_object = simplexml_load_string($xml);
+
+                if ($xml_object === false) {
+                    $error = 'Error parsing claims notice';
+                    return [
+                        'pagetitle' => 'TMCH Claims Notice',
+                        'breadcrumb' => ['index.php?m=namingo_registrar&page=tmch' => 'TMCH Claims Notice'],
+                        'templatefile' => 'tmch',
+                        'modulelink' => $modulelink,
+                        'systemurl' => $systemUrl,
+                        'requirelogin' => false,
+                        'vars' => [
+                            'error' => htmlspecialchars($error),
+                        ],
+                    ];
+                }
+
+                libxml_clear_errors();
+
                 $xml_object->registerXPathNamespace("tmNotice", "urn:ietf:params:xml:ns:tmNotice-1.0");
                 $claims = $xml_object->xpath('//tmNotice:claim');
 
