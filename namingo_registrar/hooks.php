@@ -27,7 +27,9 @@ add_hook('ClientAreaFooterOutput', 1, function ($vars) {
         if ($lookupKey === '') continue;
 
         $domain = (string)$domainKey;
-        $url = $systemUrl . 'claims?m=namingo_registrar&page=tmch&lookupKey=' . rawurlencode($lookupKey);
+        $url = $systemUrl . 'claims?m=namingo_registrar&page=tmch'
+            . '&lookupKey=' . rawurlencode($lookupKey)
+            . '&domain=' . rawurlencode($domain);
 
         $items .= '<li><a href="' . htmlspecialchars($url, ENT_QUOTES) . '" target="_blank" rel="noopener">View TMCH Claims Notice</a> for <strong>'
             . htmlspecialchars($domain, ENT_QUOTES) . '</strong></li>';

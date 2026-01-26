@@ -340,6 +340,10 @@ function namingo_registrar_clientarea(array $vars): array
         $useTest  = !empty($vars['tmch_test_server']);
 
         $lookupKey = isset($_GET['lookupKey']) ? trim((string)$_GET['lookupKey']) : '';
+        $domain = isset($_GET['domain']) ? strtolower(trim((string)$_GET['domain'])) : '';
+        if ($domain === '' || !filter_var($domain, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)) {
+            throw new Exception('Invalid domain');
+        }
 
         if ($lookupKey === '' || strpos($lookupKey, '..') !== false || strpos($lookupKey, '\\') !== false
             || preg_match("/[\r\n]/", $lookupKey)) {
@@ -395,6 +399,23 @@ function namingo_registrar_clientarea(array $vars): array
 
                 $xml_object->registerXPathNamespace("tmNotice", "urn:ietf:params:xml:ns:tmNotice-1.0");
                 $claims = $xml_object->xpath('//tmNotice:claim');
+
+                $noticeIdNodes = $xml_object->xpath('//tmNotice:id');
+                $notAfterNodes = $xml_object->xpath('//tmNotice:notAfter');
+
+                $noticeID = !empty($noticeIdNodes) ? trim((string)$noticeIdNodes[0]) : '';
+                $notAfter = !empty($notAfterNodes) ? trim((string)$notAfterNodes[0]) : '';
+
+                if (!isset($_SESSION['namingo_tmch_claims'][$domain])) {
+                    $_SESSION['namingo_tmch_claims'][$domain] = [];
+                }
+
+                if ($noticeID !== '') {
+                    $_SESSION['namingo_tmch_claims'][$domain]['noticeID'] = $noticeID;
+                }
+                if ($notAfter !== '') {
+                    $_SESSION['namingo_tmch_claims'][$domain]['notAfter'] = $notAfter;
+                }
 
                 $note = "This message is a notification that you have applied for a domain name that matches a trademark record submitted to the Trademark Clearinghouse. Your eligibility to register this domain name will depend on your intended use and if it is similar or relates to the trademarks listed below." . PHP_EOL;
 
