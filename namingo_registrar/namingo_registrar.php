@@ -106,7 +106,7 @@ function namingo_registrar_activate(): array
             `disclose_addr_int` enum('0','1') NOT NULL default '1',
             `nin` varchar(255) default NULL,
             `nin_type` enum('personal','business') default NULL,
-            `validation` enum('0','1','2','3','4'),
+            `validation` enum('0','1','2','3','4') DEFAULT '0',
             `validation_stamp` datetime(3) default NULL,
             `validation_log` varchar(255) DEFAULT NULL,
             PRIMARY KEY (`id`),
