@@ -26,7 +26,27 @@ RewriteRule ^claims$ ./index.php?m=namingo_registrar&page=tmch [L,QSA]
 
 - After each WHMCS update, **verify that these rules are still present**, as WHMCS updates may overwrite or regenerate the `.htaccess` file.
 
-## Upgrading from `whmcs_registrar` module (v1.0 or earlier)
+## Upgrade
+
+### From v1.1.0
+
+Before upgrading, make a database backup.
+
+To upgrade, replace the module files with the `v1.2.0` version and open the WHMCS admin area. WHMCS should detect the version change and run the upgrade routine automatically.
+
+Version `1.2.0` adds database support for reseller management and better ICANN/NIS2 contact validation.
+
+Existing data is preserved. Deactivating the module no longer drops database tables.
+
+After upgrading, verify that these tables exist:
+
+- `namingo_resellers`
+- `namingo_reseller_domains`
+- `namingo_contact_validation`
+
+If they were not created automatically, create them manually using the SQL from `namingo_registrar_install_v120_tables()` in `namingo_registrar.php`.
+
+### From v1.0.0 or earlier (`whmcs_registrar` module)
 
 - **Back up your WHMCS database** (and optionally the full WHMCS directory).
 
@@ -89,7 +109,7 @@ Your feedback and inquiries are invaluable to Namingo's evolutionary journey. If
 
 We appreciate your involvement and patience as Namingo continues to grow and adapt.
 
-## 💖 Support This Project
+## Support This Project
 
 If you find Namingo Registrar for WHMCS useful, consider donating:
 
