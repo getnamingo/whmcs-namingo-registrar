@@ -3,7 +3,7 @@
  * Namingo Registrar for WHMCS (https://www.whmcs.com/)
  *
  * WHMCS module for Namingo Registrar implementing ICANN registrar technical requirements
- * Written in 2025 by Taras Kondratyuk (https://namingo.org)
+ * Written in 2025-2026 by Taras Kondratyuk (https://namingo.org)
  *
  * @license Apache-2.0
  */
@@ -20,7 +20,7 @@ function namingo_registrar_config(): array
         'name'        => 'Namingo Registrar for WHMCS',
         'description' => 'WHMCS module for Namingo Registrar implementing ICANN registrar technical requirements',
         'author'      => 'Namingo',
-        'version'     => '1.1.0',
+        'version'     => '1.2.0',
         'fields' => [
             'whoisServer' => [
                 'FriendlyName' => 'WHOIS Server',
@@ -195,12 +195,13 @@ function namingo_registrar_activate(): array
         ";
 
         Capsule::unprepared($sql);
+        namingo_registrar_install_v120_tables();
 
         return [
             'status' => 'success',
             'description' => 'Module activated successfully.',
         ];
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         return [
             'status' => 'error',
             'description' => 'Activation failed: ' . $e->getMessage(),
@@ -208,19 +209,86 @@ function namingo_registrar_activate(): array
     }
 }
 
+function namingo_registrar_install_v120_tables(): void
+{
+    $sql = "
+
+    -- Resellers Table
+    CREATE TABLE IF NOT EXISTS `namingo_resellers` (
+        `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+        `identifier` varchar(100) NOT NULL,
+        `name` varchar(255) NOT NULL,
+        `email` varchar(255) DEFAULT NULL,
+        `url` varchar(255) DEFAULT NULL,
+        `country` char(2) DEFAULT NULL,
+        `status` enum('active','suspended','terminated') NOT NULL DEFAULT 'active',
+        `notes` text DEFAULT NULL,
+        `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        `updated_at` datetime(3) DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(3),
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `identifier` (`identifier`),
+        KEY `status` (`status`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+    -- Reseller Domain Mapping Table
+    CREATE TABLE IF NOT EXISTS `namingo_reseller_domains` (
+        `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+        `reseller_id` int(10) unsigned NOT NULL,
+        `domain` varchar(255) NOT NULL,
+        `whmcs_domain_id` int(10) unsigned DEFAULT NULL,
+        `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        `updated_at` datetime(3) DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(3),
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `domain` (`domain`),
+        KEY `reseller_id` (`reseller_id`),
+        KEY `whmcs_domain_id` (`whmcs_domain_id`),
+        CONSTRAINT `reseller_domains_reseller_fk`
+            FOREIGN KEY (`reseller_id`) REFERENCES `namingo_resellers`(`id`)
+            ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+    -- ICANN / NIS2 Contact Validation Table
+    CREATE TABLE IF NOT EXISTS `namingo_contact_validation` (
+        `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+        `client_id` int(10) unsigned NOT NULL,
+        `is_validated` tinyint(1) unsigned NOT NULL DEFAULT 0,
+        `validation_checked_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        `validation_method` varchar(100) DEFAULT NULL,
+        `validation_token` varchar(255) DEFAULT NULL,
+        `validation_log` text DEFAULT NULL,
+        `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        `updated_at` datetime(3) DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(3),
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `client_id` (`client_id`),
+        KEY `is_validated` (`is_validated`),
+        KEY `validation_checked_at` (`validation_checked_at`),
+        KEY `validation_token` (`validation_token`),
+        CONSTRAINT `contact_validation_client_fk`
+            FOREIGN KEY (`client_id`) REFERENCES `tblclients`(`id`)
+            ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ";
+
+    Capsule::unprepared($sql);
+}
+
+function namingo_registrar_upgrade($vars): void
+{
+    $currentlyInstalledVersion = $vars['version'] ?? '1.1.0';
+
+    if (version_compare($currentlyInstalledVersion, '1.2.0', '<')) {
+        namingo_registrar_install_v120_tables();
+    }
+}
+
 function namingo_registrar_deactivate(): array
 {
     try {
-        Capsule::schema()->dropIfExists('namingo_contact');
-        Capsule::schema()->dropIfExists('namingo_domain');
-        Capsule::schema()->dropIfExists('namingo_domain_dnssec');
-        Capsule::schema()->dropIfExists('namingo_domain_status');
-        
         return [
             'status' => 'success',
-            'description' => 'Module deactivated successfully.',
+            'description' => 'Module deactivated successfully. Data tables were preserved.',
         ];
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         return [
             'status' => 'error',
             'description' => 'Deactivation failed: ' . $e->getMessage(),
@@ -294,23 +362,50 @@ function namingo_registrar_clientarea(array $vars): array
 
         if ($token) {
             try {
-                $client = Capsule::table('namingo_contact')
-                    ->where('validation_log', $token)
+                $validation = Capsule::table('namingo_contact_validation')
+                    ->where('validation_token', $token)
                     ->first();
 
-                if ($client && $client->validation == 0) {
-                    $contact_id = $client->id;
+                if ($validation) {
+                    if ((int) $validation->is_validated === 0) {
+                        Capsule::table('namingo_contact_validation')
+                            ->where('id', $validation->id)
+                            ->update([
+                                'is_validated' => 1,
+                                'validation_checked_at' => Capsule::raw('CURRENT_TIMESTAMP(3)'),
+                                'validation_method' => $validation->validation_method ?: 'email',
+                                'validation_token' => null,
+                                'validation_log' => trim(
+                                    ((string) ($validation->validation_log ?? '')) .
+                                    "\nValidated by email token on " . date('c')
+                                ),
+                            ]);
 
-                    Capsule::table('namingo_contact')
-                        ->where('id', $contact_id)
-                        ->update(['validation' => 1]);
-
-                    $message = 'Contact information validated successfully!';
+                        $message = 'Contact information validated successfully!';
+                    } else {
+                        $message = 'Error: Contact information is already validated.';
+                        $isError = true;
+                    }
                 } else {
-                    $message = 'Error: Invalid or already validated validation token.';
-                    $isError = true;
+                    $client = Capsule::table('namingo_contact')
+                        ->where('validation_log', $token)
+                        ->first();
+
+                    if ($client && (string) $client->validation === '0') {
+                        Capsule::table('namingo_contact')
+                            ->where('id', $client->id)
+                            ->update([
+                                'validation' => 1,
+                                'validation_stamp' => Capsule::raw('CURRENT_TIMESTAMP(3)'),
+                            ]);
+
+                        $message = 'Contact information validated successfully!';
+                    } else {
+                        $message = 'Error: Invalid or already validated validation token.';
+                        $isError = true;
+                    }
                 }
-            } catch (\Exception $e) {
+            } catch (Throwable $e) {
                 $message = 'Error: ' . $e->getMessage();
                 $isError = true;
             }
