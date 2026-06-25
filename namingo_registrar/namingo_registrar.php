@@ -250,7 +250,7 @@ function namingo_registrar_install_v120_tables(): void
     -- ICANN / NIS2 Contact Validation Table
     CREATE TABLE IF NOT EXISTS `namingo_contact_validation` (
         `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-        `client_id` int(10) unsigned NOT NULL,
+        `client_id` int(10) NOT NULL,
         `is_validated` tinyint(1) unsigned NOT NULL DEFAULT 0,
         `validation_checked_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
         `validation_method` varchar(100) DEFAULT NULL,
