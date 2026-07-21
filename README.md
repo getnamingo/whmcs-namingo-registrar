@@ -28,6 +28,12 @@ RewriteRule ^claims$ ./index.php?m=namingo_registrar&page=tmch [L,QSA]
 
 ## Upgrade
 
+### From v1.2.0
+
+Before upgrading, make a database backup.
+
+To upgrade, replace the module files with the `v1.2.1` version and open the WHMCS admin area. WHMCS should detect the version change and run the upgrade routine automatically.
+
 ### From v1.1.0
 
 Before upgrading, make a database backup.

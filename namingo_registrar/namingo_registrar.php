@@ -43,12 +43,6 @@ function namingo_registrar_config(): array
                 'Default' => '/index.php?m=namingo_registrar&page=contact&domain=',
                 'Description' => 'Enter the URL for the contact form link',
             ],
-            'whmcsApiKey' => [
-                'FriendlyName' => 'WHMCS API Key',
-                'Type' => 'text',
-                'Size' => '50',
-                'Description' => 'Enter the WHMCS API key for sending emails.',
-            ],
             'tmch_username' => [
                 'FriendlyName' => 'TMCH Username',
                 'Type'         => 'text',
@@ -606,7 +600,6 @@ function namingo_registrar_clientarea(array $vars): array
     if ($page === 'contact') {
         $modulelink = $vars['modulelink'];
         $systemUrl = $vars['systemurl'];
-        $apiKey = $vars['whmcsApiKey'];
         $domain = $_GET['domain'] ?? null;
 
         $success = null;
@@ -623,7 +616,7 @@ function namingo_registrar_clientarea(array $vars): array
         }
 
         if (!$error && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            $submissionResult = contact_handleSubmission($domain, $apiKey);
+            $submissionResult = contact_handleSubmission($domain);
             if ($submissionResult === true) {
                 $success = "Your message has been sent successfully!";
             } else {
@@ -707,49 +700,45 @@ function whois_check_handler($params)
     return $output;
 }
 
-function contact_handleSubmission($domain, $apiKey)
+function contact_handleSubmission(string $domain): bool|string
 {
-    $name = $_POST['name'] ?? '';
-    $email = $_POST['email'] ?? '';
-    $message = $_POST['message'] ?? '';
+    $name = trim((string) ($_POST['name'] ?? ''));
+    $email = trim((string) ($_POST['email'] ?? ''));
+    $message = trim((string) ($_POST['message'] ?? ''));
 
-    // Check if the domain exists in WHMCS
-    $domainExists = Capsule::table('tbldomains')->where('domain', $domain)->first();
-
-    if (!$domainExists) {
-        return "Error: The specified domain does not exist.";
+    if ($name === '' || $email === '' || $message === '') {
+        return 'Error: All fields are required.';
     }
 
-    // Send email via WHMCS API
-    $userId = $domainExists->userid;
-    $systemUrl = \WHMCS\Config\Setting::getValue('SystemURL');
-    $apiUrl = $systemUrl . '/includes/api.php';
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return 'Error: Please enter a valid email address.';
+    }
 
-    $postfields = [
-        'action' => 'SendEmail',
-        'apikey' => $apiKey,
-        'messagename' => 'Registrant Contact Message',
-        'id' => $userId,
+    $domainRecord = Capsule::table('tbldomains')
+        ->select(['id', 'userid', 'domain', 'status'])
+        ->where('domain', $domain)
+        ->first();
+
+    if (!$domainRecord) {
+        return 'Error: The specified domain does not exist.';
+    }
+
+    $result = localAPI('SendEmail', [
+        'id' => (int) $domainRecord->id,
+        'customtype' => 'domain',
         'customsubject' => 'Contact Form Submission for Domain: ' . $domain,
-        'custommessage' => "Name: $name\nEmail: $email\nMessage:\n$message",
-    ];
+        'custommessage' => nl2br(
+            htmlspecialchars(
+                "Name: {$name}\nEmail: {$email}\nMessage:\n{$message}",
+                ENT_QUOTES | ENT_SUBSTITUTE,
+                'UTF-8'
+            )
+        ),
+    ]);
 
-    $queryString = http_build_query($postfields);
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $apiUrl);
-    curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $queryString);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $response = curl_exec($ch);
-    curl_close($ch);
-
-    if ($response) {
-        $decodedResponse = json_decode($response, true);
-        if (isset($decodedResponse['result']) && $decodedResponse['result'] === 'success') {
-            return true;
-        }
-        return $decodedResponse['message'] ?? 'Error: Unable to send the message.';
+    if (($result['result'] ?? '') === 'success') {
+        return true;
     }
 
-    return 'Error: Unable to connect to WHMCS API.';
+    return $result['message'] ?? 'Error: Unable to send the message.';
 }
