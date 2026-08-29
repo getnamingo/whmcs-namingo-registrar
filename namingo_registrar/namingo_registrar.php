@@ -20,7 +20,7 @@ function namingo_registrar_config(): array
         'name'        => 'Namingo Registrar for WHMCS',
         'description' => 'WHMCS module for Namingo Registrar implementing ICANN registrar technical requirements',
         'author'      => 'Namingo',
-        'version'     => '1.2.0',
+        'version'     => '1.2.2',
         'fields' => [
             'whoisServer' => [
                 'FriendlyName' => 'WHOIS Server',
@@ -190,6 +190,7 @@ function namingo_registrar_activate(): array
 
         Capsule::unprepared($sql);
         namingo_registrar_install_v120_tables();
+		namingo_registrar_upgrade_contact_validation_schema();
 
         return [
             'status' => 'success',
@@ -245,6 +246,7 @@ function namingo_registrar_install_v120_tables(): void
     CREATE TABLE IF NOT EXISTS `namingo_contact_validation` (
         `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
         `client_id` int(10) NOT NULL,
+		`contact_id` int(10) unsigned NOT NULL DEFAULT 0,
         `is_validated` tinyint(1) unsigned NOT NULL DEFAULT 0,
         `validation_checked_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
         `validation_method` varchar(100) DEFAULT NULL,
@@ -253,7 +255,7 @@ function namingo_registrar_install_v120_tables(): void
         `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
         `updated_at` datetime(3) DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP(3),
         PRIMARY KEY (`id`),
-        UNIQUE KEY `client_id` (`client_id`),
+        UNIQUE KEY `client_contact` (`client_id`, `contact_id`),
         KEY `is_validated` (`is_validated`),
         KEY `validation_checked_at` (`validation_checked_at`),
         KEY `validation_token` (`validation_token`),
@@ -268,10 +270,14 @@ function namingo_registrar_install_v120_tables(): void
 
 function namingo_registrar_upgrade($vars): void
 {
-    $currentlyInstalledVersion = $vars['version'] ?? '1.1.0';
+    $currentlyInstalledVersion = $vars['version'] ?? '1.2.1';
 
     if (version_compare($currentlyInstalledVersion, '1.2.0', '<')) {
         namingo_registrar_install_v120_tables();
+    }
+
+    if (version_compare($currentlyInstalledVersion, '1.2.2', '<')) {
+        namingo_registrar_upgrade_contact_validation_schema();
     }
 }
 
@@ -741,4 +747,43 @@ function contact_handleSubmission(string $domain): bool|string
     }
 
     return $result['message'] ?? 'Error: Unable to send the message.';
+}
+
+function namingo_registrar_upgrade_contact_validation_schema(): void
+{
+    if (!Capsule::schema()->hasTable('namingo_contact_validation')) {
+        return;
+    }
+
+    if (!Capsule::schema()->hasColumn('namingo_contact_validation', 'contact_id')) {
+        Capsule::statement(
+            "ALTER TABLE `namingo_contact_validation`
+             ADD `contact_id` int(10) unsigned NOT NULL DEFAULT 0
+             AFTER `client_id`"
+        );
+    }
+
+    $pairIndex = Capsule::select(
+        "SHOW INDEX FROM `namingo_contact_validation`
+         WHERE Key_name = 'client_contact'"
+    );
+
+    if (!$pairIndex) {
+        Capsule::statement(
+            "ALTER TABLE `namingo_contact_validation`
+             ADD UNIQUE KEY `client_contact` (`client_id`, `contact_id`)"
+        );
+    }
+
+    $legacyIndex = Capsule::select(
+        "SHOW INDEX FROM `namingo_contact_validation`
+         WHERE Key_name = 'client_id'"
+    );
+
+    if ($legacyIndex) {
+        Capsule::statement(
+            "ALTER TABLE `namingo_contact_validation`
+             DROP INDEX `client_id`"
+        );
+    }
 }
