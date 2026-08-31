@@ -28,17 +28,35 @@ RewriteRule ^claims$ ./index.php?m=namingo_registrar&page=tmch [L,QSA]
 
 ## Upgrade
 
-### From v1.2.0
+Before upgrading, back up the WHMCS database:
 
-Before upgrading, make a database backup.
+```bash
+mysqldump -u root -p WHMCS_DATABASE_NAME > /root/whmcs-before-namingo-registrar-1.2.2.sql
+```
 
-To upgrade, replace the module files with the `v1.2.1` version and open the WHMCS admin area. WHMCS should detect the version change and run the upgrade routine automatically.
+Upgrade the module:
 
-### From v1.1.0
+```bash
+cd /tmp
 
-Before upgrading, make a database backup.
+cp -a /var/www/html/whmcs/modules/addons/namingo_registrar /var/www/html/whmcs/modules/addons/namingo_registrar.backup-1.2.1
 
-To upgrade, replace the module files with the `v1.2.0` version and open the WHMCS admin area. WHMCS should detect the version change and run the upgrade routine automatically.
+git clone --branch v1.2.2 --depth 1 https://github.com/getnamingo/whmcs-namingo-registrar.git
+
+rm -rf /var/www/html/whmcs/modules/addons/namingo_registrar
+
+mv whmcs-namingo-registrar/namingo_registrar /var/www/html/whmcs/modules/addons/namingo_registrar
+
+chown -R www-data:www-data /var/www/html/whmcs/modules/addons/namingo_registrar
+
+chmod -R 755 /var/www/html/whmcs/modules/addons/namingo_registrar
+
+rm -rf /tmp/whmcs-namingo-registrar
+```
+
+Finally, log in to the WHMCS admin area. WHMCS will detect the new module version and run the `v1.2.2` upgrade routine automatically.
+
+### Notes for upgrading from v1.1.0
 
 Version `1.2.0` adds database support for reseller management and better ICANN/NIS2 contact validation.
 
