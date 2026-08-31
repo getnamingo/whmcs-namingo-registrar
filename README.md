@@ -5,9 +5,9 @@ WHMCS module for Namingo Registrar implementing ICANN registrar technical requir
 
 ```bash
 git clone https://github.com/getnamingo/whmcs-namingo-registrar
-mv whmcs-namingo-registrar/namingo_registrar /var/www/html/whmcs/modules/addons
-chown -R www-data:www-data /var/www/html/whmcs/modules/addons/namingo_registrar
-chmod -R 755 /var/www/html/whmcs/modules/addons/namingo_registrar
+mv whmcs-namingo-registrar/namingo_registrar /var/www/whmcs/modules/addons
+chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_registrar
+chmod -R 755 /var/www/whmcs/modules/addons/namingo_registrar
 ```
 
 - Go to **Settings → Apps & Integrations** in the WHMCS admin area, search for **“Namingo Registrar”**, activate the module, and then configure it from its respective configuration menu.
@@ -38,19 +38,13 @@ Upgrade the module:
 
 ```bash
 cd /tmp
-
-cp -a /var/www/html/whmcs/modules/addons/namingo_registrar /var/www/html/whmcs/modules/addons/namingo_registrar.backup-1.2.1
-
+rm -rf /tmp/whmcs-namingo-registrar
+cp -a /var/www/whmcs/modules/addons/namingo_registrar /var/www/whmcs/modules/addons/namingo_registrar.backup-1.2.1
 git clone --branch v1.2.2 --depth 1 https://github.com/getnamingo/whmcs-namingo-registrar.git
-
-rm -rf /var/www/html/whmcs/modules/addons/namingo_registrar
-
-mv whmcs-namingo-registrar/namingo_registrar /var/www/html/whmcs/modules/addons/namingo_registrar
-
-chown -R www-data:www-data /var/www/html/whmcs/modules/addons/namingo_registrar
-
-chmod -R 755 /var/www/html/whmcs/modules/addons/namingo_registrar
-
+rm -rf /var/www/whmcs/modules/addons/namingo_registrar
+mv whmcs-namingo-registrar/namingo_registrar /var/www/whmcs/modules/addons/namingo_registrar
+chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_registrar
+chmod -R 755 /var/www/whmcs/modules/addons/namingo_registrar
 rm -rf /tmp/whmcs-namingo-registrar
 ```
 
@@ -81,7 +75,7 @@ If they were not created automatically, create them manually using the SQL from 
   - Domain Registrant Contact
 
 - Edit:
-  `/var/www/html/whmcs/modules/addons/whmcs_registrar/whmcs_registrar.php`  
+  `/var/www/whmcs/modules/addons/whmcs_registrar/whmcs_registrar.php`  
   In the `_deactivate()` function, **remove** the following lines (to prevent dropping Namingo tables):
   ```php
   Capsule::schema()->dropIfExists('namingo_contact');
@@ -94,7 +88,7 @@ If they were not created automatically, create them manually using the SQL from 
 
 - Install the new module (as described in the installation section), but **do not activate it yet**.
 
-- Edit `/var/www/html/whmcs/modules/addons/namingo_registrar/namingo_registrar.php`  
+- Edit `/var/www/whmcs/modules/addons/namingo_registrar/namingo_registrar.php`  
   In the `_activate()` function, **comment out** the line `Capsule::unprepared($sql);`.
   
 - Now **activate the new module** and **reconfigure it** using the settings you saved from the old modules.
