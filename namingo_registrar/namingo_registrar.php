@@ -20,7 +20,7 @@ function namingo_registrar_config(): array
         'name'        => 'Namingo Registrar for WHMCS',
         'description' => 'WHMCS module for Namingo Registrar implementing ICANN registrar technical requirements',
         'author'      => 'Namingo',
-        'version'     => '1.2.2',
+        'version'     => '1.2.3',
         'fields' => [
             'whoisServer' => [
                 'FriendlyName' => 'WHOIS Server',
@@ -190,7 +190,8 @@ function namingo_registrar_activate(): array
 
         Capsule::unprepared($sql);
         namingo_registrar_install_v120_tables();
-		namingo_registrar_upgrade_contact_validation_schema();
+        namingo_registrar_upgrade_contact_validation_schema();
+        namingo_registrar_install_v123_tables();
 
         return [
             'status' => 'success',
@@ -246,7 +247,7 @@ function namingo_registrar_install_v120_tables(): void
     CREATE TABLE IF NOT EXISTS `namingo_contact_validation` (
         `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
         `client_id` int(10) NOT NULL,
-		`contact_id` int(10) unsigned NOT NULL DEFAULT 0,
+        `contact_id` int(10) unsigned NOT NULL DEFAULT 0,
         `is_validated` tinyint(1) unsigned NOT NULL DEFAULT 0,
         `validation_checked_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
         `validation_method` varchar(100) DEFAULT NULL,
@@ -268,6 +269,33 @@ function namingo_registrar_install_v120_tables(): void
     Capsule::unprepared($sql);
 }
 
+function namingo_registrar_install_v123_tables(): void
+{
+    $sql = "
+
+    -- Registrar Compliance Notifications
+    CREATE TABLE IF NOT EXISTS `namingo_registrar_notifications` (
+        `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+        `domain_id` int(10) unsigned DEFAULT NULL,
+        `domain` varchar(255) NOT NULL,
+        `type` varchar(32) NOT NULL,
+        `recipient` varchar(255) NOT NULL,
+        `subject` varchar(255) DEFAULT NULL,
+        `body` mediumtext NOT NULL,
+        `metadata` json DEFAULT NULL,
+        `sent_at` datetime(3) NOT NULL,
+        `created_at` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        PRIMARY KEY (`id`),
+        KEY `domain_id` (`domain_id`),
+        KEY `domain` (`domain`),
+        KEY `type` (`type`),
+        KEY `sent_at` (`sent_at`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ";
+
+    Capsule::unprepared($sql);
+}
+
 function namingo_registrar_upgrade($vars): void
 {
     $currentlyInstalledVersion = $vars['version'] ?? '1.2.1';
@@ -278,6 +306,10 @@ function namingo_registrar_upgrade($vars): void
 
     if (version_compare($currentlyInstalledVersion, '1.2.2', '<')) {
         namingo_registrar_upgrade_contact_validation_schema();
+    }
+
+    if (version_compare($currentlyInstalledVersion, '1.2.3', '<')) {
+        namingo_registrar_install_v123_tables();
     }
 }
 

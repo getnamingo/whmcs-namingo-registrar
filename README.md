@@ -4,7 +4,7 @@ WHMCS module for Namingo Registrar implementing ICANN registrar technical requir
 ## Installation
 
 ```bash
-git clone --depth 1 --branch v1.2.2 https://github.com/getnamingo/whmcs-namingo-registrar
+git clone --depth 1 --branch v1.2.3 https://github.com/getnamingo/whmcs-namingo-registrar
 mv whmcs-namingo-registrar/namingo_registrar /var/www/whmcs/modules/addons
 chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_registrar
 chmod -R 755 /var/www/whmcs/modules/addons/namingo_registrar
@@ -39,8 +39,8 @@ Upgrade the module:
 ```bash
 cd /tmp
 rm -rf /tmp/whmcs-namingo-registrar
-cp -a /var/www/whmcs/modules/addons/namingo_registrar /var/www/whmcs/modules/addons/namingo_registrar.backup-1.2.1
-git clone --depth 1 --branch v1.2.2 https://github.com/getnamingo/whmcs-namingo-registrar
+cp -a /var/www/whmcs/modules/addons/namingo_registrar /var/www/whmcs/modules/addons/namingo_registrar.backup-1.2.2
+git clone --depth 1 --branch v1.2.3 https://github.com/getnamingo/whmcs-namingo-registrar
 rm -rf /var/www/whmcs/modules/addons/namingo_registrar
 mv whmcs-namingo-registrar/namingo_registrar /var/www/whmcs/modules/addons/namingo_registrar
 chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_registrar
