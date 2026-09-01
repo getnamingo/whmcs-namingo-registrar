@@ -291,6 +291,49 @@ function namingo_registrar_install_v123_tables(): void
         KEY `type` (`type`),
         KEY `sent_at` (`sent_at`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+    CREATE TABLE IF NOT EXISTS namingo_domain_validation (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        backend VARCHAR(32) NOT NULL,
+        domain_id INT(10) UNSIGNED NOT NULL,
+        domain_name VARCHAR(253) NOT NULL,
+        verification_key VARCHAR(191) NOT NULL,
+        contact_data_hash CHAR(64) NOT NULL,
+        registrant_data_hash CHAR(64) NOT NULL,
+        trigger_type ENUM(
+            'registration',
+            'transfer_in',
+            'registrant_change',
+            'contact_change',
+            'bounce',
+            'inaccuracy',
+            'manual'
+        ) NOT NULL,
+        triggered_at DATETIME(3) NOT NULL,
+        deadline_at DATETIME(3) NOT NULL,
+        status ENUM('pending', 'verified', 'suspended', 'inactive') NOT NULL DEFAULT 'pending',
+        token_hash CHAR(64) DEFAULT NULL,
+        token_issued_at DATETIME(3) DEFAULT NULL,
+        email_sent_at DATETIME(3) DEFAULT NULL,
+        reminder_sent_at DATETIME(3) DEFAULT NULL,
+        verified_at DATETIME(3) DEFAULT NULL,
+        verification_method VARCHAR(32) DEFAULT NULL,
+        verification_note TEXT DEFAULT NULL,
+        client_hold_added TINYINT(1) NOT NULL DEFAULT 0,
+        client_transfer_prohibited_added TINYINT(1) NOT NULL DEFAULT 0,
+        suspended_at DATETIME(3) DEFAULT NULL,
+        restored_at DATETIME(3) DEFAULT NULL,
+        last_error TEXT DEFAULT NULL,
+        is_current TINYINT(1) DEFAULT 1,
+        ended_at DATETIME(3) DEFAULT NULL,
+        created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+        PRIMARY KEY (id),
+        UNIQUE KEY uq_domain_validation_current (backend, domain_id, is_current),
+        KEY ix_domain_validation_deadline (status, deadline_at),
+        KEY ix_domain_validation_hash (contact_data_hash, status),
+        KEY ix_domain_validation_key (backend, verification_key, is_current)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     ";
 
     Capsule::unprepared($sql);
