@@ -2,12 +2,12 @@
   "schema": "1.0",
   "type": "whmcs-addons",
   "name": "namingo_registrar",
-  "version": "1.2.3",
+  "version": "1.2.8",
   "license": "MIT",
   "category": "utilities",
   "description": {
     "name": "Namingo Registrar for WHMCS",
-    "tagline": "WHMCS module for Namingo Registrar implementing ICANN registrar technical requirements"
+    "tagline": "WHMCS modules for Namingo Registrar, implementing the technical requirements for ICANN-accredited registrars"
   },
   "authors": [
     {

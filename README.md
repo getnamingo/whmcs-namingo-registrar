@@ -1,10 +1,17 @@
 # Namingo Registrar for WHMCS
-WHMCS module for Namingo Registrar implementing ICANN registrar technical requirements
+WHMCS modules for Namingo Registrar, implementing the technical requirements for ICANN-accredited registrars.
+
+> [!IMPORTANT]
+> This repository is part of [Namingo Registrar](https://github.com/getnamingo/registrar) and is intended to be used exclusively with it. It is not designed for standalone use.
+
+[![StandWithUkraine](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/badges/StandWithUkraine.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
+
+[![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://github.com/vshymanskyy/StandWithUkraine/blob/main/docs/README.md)
 
 ## Installation
 
 ```bash
-git clone --depth 1 --branch v1.2.3 https://github.com/getnamingo/whmcs-namingo-registrar
+git clone --depth 1 --branch v1.2.8 https://github.com/getnamingo/whmcs-namingo-registrar
 mv whmcs-namingo-registrar/namingo_registrar /var/www/whmcs/modules/addons
 chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_registrar
 chmod -R 755 /var/www/whmcs/modules/addons/namingo_registrar
@@ -31,7 +38,7 @@ RewriteRule ^claims$ ./index.php?m=namingo_registrar&page=tmch [L,QSA]
 Before upgrading, back up the WHMCS database:
 
 ```bash
-mysqldump -u root -p WHMCS_DATABASE_NAME > /root/whmcs-before-namingo-registrar-1.2.2.sql
+mysqldump -u root -p WHMCS_DATABASE_NAME > /root/whmcs-before-namingo-registrar-1.2.3.sql
 ```
 
 Upgrade the module:
@@ -39,8 +46,8 @@ Upgrade the module:
 ```bash
 cd /tmp
 rm -rf /tmp/whmcs-namingo-registrar
-cp -a /var/www/whmcs/modules/addons/namingo_registrar /var/www/whmcs/modules/addons/namingo_registrar.backup-1.2.2
-git clone --depth 1 --branch v1.2.3 https://github.com/getnamingo/whmcs-namingo-registrar
+cp -a /var/www/whmcs/modules/addons/namingo_registrar /var/www/whmcs/modules/addons/namingo_registrar.backup-1.2.3
+git clone --depth 1 --branch v1.2.8 https://github.com/getnamingo/whmcs-namingo-registrar
 rm -rf /var/www/whmcs/modules/addons/namingo_registrar
 mv whmcs-namingo-registrar/namingo_registrar /var/www/whmcs/modules/addons/namingo_registrar
 chown -R www-data:www-data /var/www/whmcs/modules/addons/namingo_registrar
@@ -48,7 +55,7 @@ chmod -R 755 /var/www/whmcs/modules/addons/namingo_registrar
 rm -rf /tmp/whmcs-namingo-registrar
 ```
 
-Finally, log in to the WHMCS admin area. WHMCS will detect the new module version and run the `v1.2.2` upgrade routine automatically.
+Finally, log in to the WHMCS admin area. WHMCS will detect the new module version and run the `v1.2.8` upgrade routine automatically.
 
 ### Notes for upgrading from v1.1.0
 
@@ -104,16 +111,6 @@ RewriteCond %{REQUEST_URI} ^/claims [NC]
 RewriteRule ^claims$ ./index.php?m=namingo_registrar&page=tmch [L,QSA]
 </IfModule>
 ```
-
-## Usage Instructions
-
-This module is a **WHMCS module for Namingo Registrar implementing ICANN registrar technical requirements**.  
-It is an integral part of the **Namingo Registrar** project and is intended to be used as the WHMCS integration layer for registrar operations.
-
-Detailed, step-by-step usage instructions are provided as part of the Namingo Registrar documentation and project resources.
-
-For the Namingo Registrar core project and overall architecture, see:  
-https://github.com/getnamingo/registrar
 
 ## Support
 

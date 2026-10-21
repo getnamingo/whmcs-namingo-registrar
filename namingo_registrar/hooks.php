@@ -1,4 +1,17 @@
 <?php
+
+/*
+ * Namingo Registrar
+ *
+ * Copyright (c) 2023-2026 Taras Kondratyuk
+ * Copyright (c) 2025-2026 Namingo contributors
+ * Copyright (c) 2026 Terbora Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
 }
